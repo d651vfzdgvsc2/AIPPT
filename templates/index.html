@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN" id="htmlTag">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt 定制助手 - 带图片理解</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: #f5f5f0;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            border-radius: 24px;
+            padding: 40px 36px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 40px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .tpl-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .tpl-chip {
+            padding: 5px 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 999px;
+            background: #fff;
+            color: #475569;
+            font-size: 12.5px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .tpl-chip:hover { border-color: #3b82f6; color: #3b82f6; background: #f0f7ff; }
+
+        textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            font-size: 15px;
+            font-family: inherit;
+            line-height: 1.6;
+            resize: vertical;
+            transition: all 0.2s ease;
+            background: #fafbfc;
+            color: #1e293b;
+        }
+
+        textarea::placeholder { color: #94a3b8; }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
+            background: #fff;
+        }
+
+        .upload-zone {
+            position: relative;
+            border: 2px dashed #d1d5db;
+            border-radius: 14px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafbfc;
+        }
+
+        .upload-zone:hover { border-color: #3b82f6; background: #f0f7ff; }
+        .upload-zone.dragover { border-color: #3b82f6; background: #eef4ff; }
+
+        .upload-zone.has-image {
+            border-style: solid;
+            border-color: #d1d5db;
+            padding: 16px;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+        .upload-text { font-size: 14px; color: #64748b; }
+        .upload-text strong { color: #3b82f6; }
+        .upload-hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+        .preview-wrap { display: none; position: relative; margin-top: 12px; }
+        .preview-wrap.visible { display: block; }
+
+        .preview-wrap img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: block;
+        }
+
+        .preview-wrap .clear-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            font-size: 16px;
+            line-height: 26px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .preview-wrap .clear-btn:hover { background: rgba(0,0,0,0.7); }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .toolbar button {
+            padding: 6px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toolbar button:hover { border-color: #3b82f6; color: #3b82f6; }
+        .toolbar .btn-lang { margin-right: auto; }
+
+        .toolbar .btn-vip {
+            border-color: #f59e0b;
+            color: #d97706;
+            background: #fffbeb;
+        }
+
+        .toolbar .btn-vip:hover { background: #fef3c7; border-color: #f59e0b; }
+
+        .btn-generate {
+            width: 100%;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 14px;
+            background: #3b82f6;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-generate:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(59,130,246,0.45);
+        }
+
+        .btn-generate:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+        .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .result-area {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1.5px solid #e2e8f0;
+            background: #fafbfc;
+            min-height: 60px;
+            line-height: 1.7;
+            color: #1e293b;
+            font-size: 15px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            transition: border-color 0.2s;
+        }
+
+        .result-area.has-content { border-color: #d1d5db; background: #fff; }
+        .result-area .placeholder { color: #94a3b8; }
+        .result-area .error { color: #ef4444; font-weight: 500; }
+        .result-area .thinking { color: #64748b; }
+
+        .result-actions {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .result-actions.visible { display: flex; }
+
+        .result-actions .char-count { font-size: 12px; color: #94a3b8; }
+
+        .mini-btn {
+            padding: 6px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mini-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+        .mini-btn.refine { border-color: #10b981; color: #059669; }
+        .mini-btn.refine:hover { background: #ecfdf5; }
+
+        .history-section { margin-top: 20px; display: none; }
+        .history-section.visible { display: block; }
+
+        .history-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .history-head .history-title { font-size: 13px; font-weight: 500; color: #475569; }
+        .history-head .history-clear {
+            border: none; background: none; color: #94a3b8;
+            font-size: 12px; cursor: pointer; font-family: inherit;
+        }
+        .history-head .history-clear:hover { color: #ef4444; }
+
+        .history-item {
+            padding: 10px 12px;
+            border: 1.5px solid #f1f5f9;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .history-item:hover { border-color: #bfdbfe; background: #f8fafc; }
+        .history-item .h-meta { font-size: 11px; color: #94a3b8; margin-bottom: 3px; display: flex; gap: 8px; }
+        .history-item .h-text {
+            font-size: 13px; color: #334155; line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .sponsor-section {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1.5px solid #f1f5f9;
+            text-align: center;
+        }
+
+        .sponsor-section .sponsor-label { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+
+        .sponsor-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+        .sponsor-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .sponsor-btn:hover { border-color: #3b82f6; background: #f0f7ff; }
+        .sponsor-btn .icon { font-size: 18px; }
+
+        .qr-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-overlay.visible { display: flex; }
+
+        .qr-modal {
+            background: #fff;
+            border-radius: 20px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            max-width: 300px;
+            width: 90%;
+        }
+
+        .qr-modal img {
+            width: 200px; height: 200px;
+            border-radius: 8px; background: #f1f5f9;
+            object-fit: contain; display: block; margin: 0 auto 12px;
+        }
+
+        .qr-modal .qr-label { font-size: 14px; color: #1e293b; font-weight: 500; margin-bottom: 4px; }
+        .qr-modal .qr-hint { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+
+        .qr-modal .qr-close {
+            padding: 8px 24px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+            color: #475569;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .qr-modal .qr-close:hover { border-color: #3b82f6; color: #3b82f6; }
+
+        @media (max-width: 600px) {
+            body { padding: 16px; }
+            .card { padding: 24px 20px; border-radius: 20px; }
+            h2 { font-size: 20px; }
+            .btn-generate { font-size: 15px; padding: 13px 20px; }
+            .upload-zone { padding: 20px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="toolbar">
+        <button class="btn-lang" id="langToggle">EN</button>
+        <button class="btn-vip" id="vipBtn"><span>👑</span> <span data-i18n="vip">升级会员</span></button>
+    </div>
+
+    <h2 data-i18n="title">视觉 Prompt 定制助手</h2>
+    <p class="subtitle" data-i18n="subtitle">上传图片或描述需求，AI 自动生成高质量 Prompt</p>
+
+    <div class="form-group">
+        <label for="userInput" data-i18n="descLabel">需求描述</label>
+        <div class="tpl-row" id="tplRow"></div>
+        <textarea id="userInput" rows="4" data-i18n-placeholder="descPlaceholder" placeholder="输入你想定制的prompt"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label data-i18n="uploadLabel">上传图片（可选）</label>
+        <div class="upload-zone" id="uploadZone">
+            <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp">
+            <span class="upload-icon">📁</span>
+            <div class="upload-text" data-i18n="uploadText">拖拽图片到此处，或 <strong data-i18n="uploadClick">点击选择文件</strong></div>
+            <div class="upload-hint" data-i18n="uploadHint">支持 JPG / PNG / WebP，大图会自动压缩</div>
+        </div>
+        <div class="preview-wrap" id="previewWrap">
+            <img id="imagePreview" alt="image preview">
+            <button class="clear-btn" id="clearBtn">&times;</button>
+        </div>
+    </div>
+
+    <button class="btn-generate" id="generateBtn">
+        <span>✨</span> <span data-i18n="generateBtn">生成 Prompt</span>
+    </button>
+
+    <div class="result-area" id="resultArea">
+        <span class="placeholder" data-i18n="resultPlaceholder">等待生成...</span>
+    </div>
+
+    <div class="result-actions" id="resultActions">
+        <button class="mini-btn" id="copyBtn" data-i18n="copy">📋 复制</button>
+        <button class="mini-btn refine" id="refineBtn" data-i18n="refine">🔄 再优化一版</button>
+        <span class="char-count" id="charCount"></span>
+    </div>
+
+    <div class="history-section" id="historySection">
+        <div class="history-head">
+            <span class="history-title" data-i18n="historyTitle">🕘 历史记录（最近 20 条）</span>
+            <button class="history-clear" id="historyClear" data-i18n="historyClear">清空</button>
+        </div>
+        <div id="historyList"></div>
+    </div>
+
+    <div class="sponsor-section">
+        <div class="sponsor-label" data-i18n="sponsorLabel">❤️ 支持作者</div>
+        <div class="sponsor-row">
+            <button class="sponsor-btn" id="sponsorWechat">
+                <span class="icon">💚</span> 微信
+            </button>
+            <button class="sponsor-btn" id="sponsorAlipay">
+                <span class="icon">💙</span> 支付宝
+            </button>
+            <a class="sponsor-btn" id="sponsorBmac" href="#" target="_blank" rel="noopener">
+                <span class="icon">☕</span> Buy Me a Coffee
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="qr-overlay" id="qrOverlay">
+    <div class="qr-modal">
+        <img id="qrImage" src="" alt="QR Code">
+        <div class="qr-label" id="qrLabel">微信收款码</div>
+        <div class="qr-hint" data-i18n="qrHint">扫码赞助，感谢支持 ❤️</div>
+        <button class="qr-close" id="qrClose" data-i18n="qrClose">关闭</button>
+    </div>
+</div>
+
+<script>
+    const userInput = document.getElementById('userInput');
+    const imageInput = document.getElementById('imageInput');
+    const uploadZone = document.getElementById('uploadZone');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewWrap = document.getElementById('previewWrap');
+    const clearBtn = document.getElementById('clearBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const resultArea = document.getElementById('resultArea');
+    const resultActions = document.getElementById('resultActions');
+    const copyBtn = document.getElementById('copyBtn');
+    const refineBtn = document.getElementById('refineBtn');
+    const charCount = document.getElementById('charCount');
+    const historySection = document.getElementById('historySection');
+    const historyList = document.getElementById('historyList');
+    const historyClear = document.getElementById('historyClear');
+    const langToggle = document.getElementById('langToggle');
+    const vipBtn = document.getElementById('vipBtn');
+    const htmlTag = document.getElementById('htmlTag');
+    const sponsorWechat = document.getElementById('sponsorWechat');
+    const sponsorAlipay = document.getElementById('sponsorAlipay');
+    const sponsorBmac = document.getElementById('sponsorBmac');
+    const qrOverlay = document.getElementById('qrOverlay');
+    const qrImage = document.getElementById('qrImage');
+    const qrLabel = document.getElementById('qrLabel');
+    const qrClose = document.getElementById('qrClose');
+    const tplRow = document.getElementById('tplRow');
+
+    let base64Image = null;
+    let lang = 'zh';
+    let lastPrompt = '';      // 上一次生成结果（供"再优化一版"用）
+    let generating = false;
+
+    // ===================== 场景模板 =====================
+    const TEMPLATES = {
+        zh: [
+            { name: '📊 工作汇报', text: '帮我生成一份「季度工作汇报」PPT 的提示词：面向部门领导，包含目标回顾、关键成果（用数据说话）、问题与反思、下季度计划四个部分，风格专业简洁，蓝色商务配色。' },
+            { name: '🚀 产品发布', text: '帮我生成一份「新产品发布会」PPT 的提示词：面向媒体和客户，包含行业痛点、产品亮点（对比表格）、演示截图、价格与上市计划，风格科技感强，深色背景。' },
+            { name: '🎓 教学课件', text: '帮我生成一份教学课件的提示词：面向大学生，主题由我后续指定，包含学习目标、知识点讲解（每页一个概念+例子）、课堂互动问题、小结，风格清新易读，配图丰富。' },
+            { name: '💰 路演融资', text: '帮我生成一份创业项目融资路演 PPT 的提示词：面向投资人，包含痛点、解决方案、市场规模、商业模式、进展数据、团队、融资计划，风格简洁有力，10页以内。' },
+            { name: '📅 年终总结', text: '帮我生成一份「个人年终总结」PPT 的提示词：包含全年工作亮点、量化成绩、成长与不足、明年规划，风格温暖有感染力，适合汇报展示。' },
+            { name: '🎤 培训分享', text: '帮我生成一份内部分享 PPT 的提示词：面向同事的技术/经验分享，包含背景引入、核心方法（分步骤）、案例演示、避坑建议、参考资料，风格轻松专业。' },
+        ],
+        en: [
+            { name: '📊 Work Report', text: 'Generate a prompt for a quarterly work report PPT: for department leaders, covering goals review, key results (data-driven), reflections, and next quarter plan. Professional style, business blue palette.' },
+            { name: '🚀 Product Launch', text: 'Generate a prompt for a product launch PPT: for media and customers, covering pain points, product highlights (comparison table), demo screenshots, pricing and launch plan. Tech-savvy style, dark background.' },
+            { name: '🎓 Courseware', text: 'Generate a prompt for a teaching PPT: for college students, with learning objectives, one concept per page with examples, in-class questions, and summary. Clean and readable style.' },
+            { name: '💰 Pitch Deck', text: 'Generate a prompt for a startup fundraising pitch deck: for investors, covering problem, solution, market size, business model, traction, team, and ask. Concise and powerful, under 10 slides.' },
+        ]
+    };
+
+    function renderTemplates() {
+        tplRow.innerHTML = '';
+        TEMPLATES[lang].forEach(tpl => {
+            const chip = document.createElement('button');
+            chip.className = 'tpl-chip';
+            chip.textContent = tpl.name;
+            chip.addEventListener('click', () => { userInput.value = tpl.text; userInput.focus(); });
+            tplRow.appendChild(chip);
+        });
+    }
+
+    // ===================== i18n =====================
+    const i18n = {
+        zh: {
+            title: '视觉 Prompt 定制助手',
+            subtitle: '上传图片或描述需求，AI 自动生成高质量 Prompt',
+            descLabel: '需求描述',
+            descPlaceholder: '输入你想定制的prompt，或点上方模板快速开始',
+            uploadLabel: '上传图片（可选）',
+            uploadText: '拖拽图片到此处，或 ',
+            uploadClick: '点击选择文件',
+            uploadHint: '支持 JPG / PNG / WebP，大图会自动压缩',
+            generateBtn: '生成 Prompt',
+            resultPlaceholder: '等待生成...',
+            vip: '升级会员',
+            imgSelected: '已选择图片，点击可更换',
+            alertNoInput: '请填写需求或上传图片',
+            thinking: '🤖 AI 思考中...',
+            errorPrefix: '错误：',
+            errorNetwork: '网络错误：',
+            vipAlert: '会员功能即将开放，敬请期待！',
+            sponsorLabel: '❤️ 支持作者',
+            qrHint: '扫码赞助，感谢支持 ❤️',
+            qrClose: '关闭',
+            copy: '📋 复制',
+            copied: '✅ 已复制到剪贴板',
+            copyFail: '复制失败，请手动选择复制',
+            refine: '🔄 再优化一版',
+            refinePlaceholder: '想怎么改？例如：更专业一点 / 加一页数据对比 / 换成科技风...',
+            refineHint: '🔄 优化模式：输入修改意见后点生成，AI 会在上一版基础上修改',
+            historyTitle: '🕘 历史记录（最近 20 条）',
+            historyClear: '清空',
+            historyEmpty: '暂无历史记录',
+            chars: '字',
+            refineLabel: '优化',
+            freshLabel: '全新',
+        },
+        en: {
+            title: 'Visual Prompt Assistant',
+            subtitle: 'Upload an image or describe your needs, AI generates high-quality prompts',
+            descLabel: 'Description',
+            descPlaceholder: 'Enter your custom prompt, or pick a template above',
+            uploadLabel: 'Upload Image (Optional)',
+            uploadText: 'Drag image here, or ',
+            uploadClick: 'click to select',
+            uploadHint: 'Supports JPG / PNG / WebP, large images are compressed',
+            generateBtn: 'Generate Prompt',
+            resultPlaceholder: 'Awaiting generation...',
+            vip: 'Upgrade',
+            imgSelected: 'Image selected, click to change',
+            alertNoInput: 'Please fill in requirements or upload an image',
+            thinking: '🤖 AI thinking...',
+            errorPrefix: 'Error: ',
+            errorNetwork: 'Network error: ',
+            vipAlert: 'Membership feature coming soon!',
+            sponsorLabel: '❤️ Support the Author',
+            qrHint: 'Scan to sponsor, thank you! ❤️',
+            qrClose: 'Close',
+            copy: '📋 Copy',
+            copied: '✅ Copied to clipboard',
+            copyFail: 'Copy failed, please select manually',
+            refine: '🔄 Refine',
+            refinePlaceholder: 'How to improve? e.g. more professional / add a data slide / tech style...',
+            refineHint: '🔄 Refine mode: type your feedback and generate — AI will revise the last version',
+            historyTitle: '🕘 History (last 20)',
+            historyClear: 'Clear',
+            historyEmpty: 'No history yet',
+            chars: 'chars',
+            refineLabel: 'Refined',
+            freshLabel: 'New',
+        }
+    };
+
+    function applyLang() {
+        const t = i18n[lang];
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (t[key] !== undefined) {
+                if (key === 'uploadText') {
+                    el.innerHTML = t[key] + '<strong>' + t.uploadClick + '</strong>';
+                } else {
+                    el.textContent = t[key];
+                }
+            }
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.dataset.i18nPlaceholder;
+            if (t[key] !== undefined) el.placeholder = t[key];
+        });
+        htmlTag.lang = lang === 'zh' ? 'zh-CN' : 'en';
+        langToggle.textContent = lang === 'zh' ? 'EN' : '中文';
+        renderTemplates();
+        renderHistory();
+    }
+
+    langToggle.addEventListener('click', function() {
+        lang = lang === 'zh' ? 'en' : 'zh';
+        applyLang();
+        if (imagePreview.src && uploadZone.classList.contains('has-image')) {
+            uploadZone.querySelector('.upload-text').innerHTML = i18n[lang].imgSelected;
+        }
+    });
+
+    vipBtn.addEventListener('click', function() {
+        alert(i18n[lang].vipAlert);
+    });
+
+    // ===================== 图片上传 + 压缩 =====================
+    // 大图先在前端压缩（最长边 1280 / JPEG 85%），上传又快又省 token
+    function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const MAX_DIM = 1280;
+                    let { width, height } = img;
+                    if (width > MAX_DIM || height > MAX_DIM) {
+                        const scale = MAX_DIM / Math.max(width, height);
+                        width = Math.round(width * scale);
+                        height = Math.round(height * scale);
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = function() { resolve(e.target.result); }; // 压缩失败用原图
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function showPreview(src) {
+        imagePreview.src = src;
+        previewWrap.classList.add('visible');
+        uploadZone.classList.add('has-image');
+        uploadZone.querySelector('.upload-icon').textContent = '✅';
+        uploadZone.querySelector('.upload-text').innerHTML = i18n[lang].imgSelected;
+    }
+
+    function hidePreview() {
+        base64Image = null;
+        imagePreview.src = '';
+        previewWrap.classList.remove('visible');
+        uploadZone.classList.remove('has-image');
+        uploadZone.querySelector('.upload-icon').textContent = '📁';
+        const t = i18n[lang];
+        uploadZone.querySelector('.upload-text').innerHTML = t.uploadText + '<strong>' + t.uploadClick + '</strong>';
+        imageInput.value = '';
+    }
+
+    async function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        base64Image = await compressImage(file);
+        showPreview(base64Image);
+    }
+
+    imageInput.addEventListener('change', function() { handleFile(this.files[0]); });
+
+    clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        hidePreview();
+    });
+
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        handleFile(e.dataTransfer.files[0]);
+    });
+
+    // ===================== 赞助（原功能保留） =====================
+    sponsorWechat.addEventListener('click', function() {
+        qrImage.src = '/static/qr/wechat.svg';
+        qrLabel.textContent = lang === 'zh' ? '微信收款码' : 'WeChat Pay';
+        qrOverlay.classList.add('visible');
+    });
+
+    sponsorAlipay.addEventListener('click', function() {
+        qrImage.src = '/static/qr/alipay.svg';
+        qrLabel.textContent = lang === 'zh' ? '支付宝收款码' : 'Alipay';
+        qrOverlay.classList.add('visible');
+    });
+
+    function closeQr() { qrOverlay.classList.remove('visible'); }
+    qrClose.addEventListener('click', closeQr);
+    qrOverlay.addEventListener('click', function(e) { if (e.target === qrOverlay) closeQr(); });
+
+    // ===================== 历史记录（localStorage） =====================
+    const HISTORY_KEY = 'ppt_prompt_history';
+    const HISTORY_MAX = 20;
+
+    function loadHistory() {
+        try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+        catch (e) { return []; }
+    }
+
+    function saveHistoryItem(item) {
+        const list = loadHistory();
+        list.unshift(item);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_MAX)));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const list = loadHistory();
+        historySection.classList.toggle('visible', list.length > 0);
+        historyList.innerHTML = '';
+        list.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            const meta = document.createElement('div');
+            meta.className = 'h-meta';
+            const when = new Date(item.ts);
+            const pad = n => String(n).padStart(2, '0');
+            const label = item.refined ? i18n[lang].refineLabel : i18n[lang].freshLabel;
+            meta.textContent = pad(when.getMonth()+1) + '-' + pad(when.getDate()) + ' ' + pad(when.getHours()) + ':' + pad(when.getMinutes()) + ' · ' + label;
+            const text = document.createElement('div');
+            text.className = 'h-text';
+            text.textContent = item.prompt;
+            div.appendChild(meta);
+            div.appendChild(text);
+            // 点击历史：把这条结果放回结果区，并进入优化模式
+            div.addEventListener('click', () => {
+                lastPrompt = item.prompt;
+                resultArea.textContent = item.prompt;
+                resultArea.classList.add('has-content');
+                updateResultActions(item.prompt);
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            });
+            historyList.appendChild(div);
+        });
+    }
+
+    historyClear.addEventListener('click', function() {
+        if (confirm(lang === 'zh' ? '确定清空全部历史记录？' : 'Clear all history?')) {
+            localStorage.removeItem(HISTORY_KEY);
+            renderHistory();
+        }
+    });
+
+    // ===================== 结果操作：复制 / 再优化 =====================
+    function updateResultActions(text) {
+        resultActions.classList.toggle('visible', !!text);
+        charCount.textContent = text ? (text.length + ' ' + i18n[lang].chars) : '';
+    }
+
+    copyBtn.addEventListener('click', async function() {
+        const text = lastPrompt || resultArea.textContent;
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            copyBtn.textContent = i18n[lang].copied;
+        } catch (e) {
+            // 剪贴板 API 不可用时退回老办法
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta);
+            ta.select(); document.execCommand('copy'); ta.remove();
+            copyBtn.textContent = i18n[lang].copied;
+        }
+        setTimeout(() => { copyBtn.textContent = i18n[lang].copy; }, 2000);
+    });
+
+    refineBtn.addEventListener('click', function() {
+        if (!lastPrompt) return;
+        userInput.value = '';
+        userInput.placeholder = i18n[lang].refinePlaceholder;
+        userInput.focus();
+        resultArea.innerHTML = '<span class="thinking">' + i18n[lang].refineHint + '</span>';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // ===================== 生成（流式） =====================
+    generateBtn.addEventListener('click', async function() {
+        if (generating) return;
+        const text = userInput.value.trim();
+        if (!text && !base64Image) {
+            alert(i18n[lang].alertNoInput);
+            return;
+        }
+        // 点过"再优化一版"且有上一版结果 -> 优化模式（带 previous_prompt）
+        const isRefine = refineRequested && !!lastPrompt && !!text;
+        generating = true;
+        generateBtn.disabled = true;
+        resultArea.innerHTML = '<span class="thinking">' + i18n[lang].thinking + '</span>';
+        resultArea.classList.add('has-content');
+        updateResultActions('');
+        let full = '';
+        try {
+            const res = await fetch('/generate/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_input: text,
+                    image_base64: base64Image,
+                    previous_prompt: isRefine ? lastPrompt : null,
+                })
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || ('HTTP ' + res.status));
+            }
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let hadError = false;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop();
+                for (const part of parts) {
+                    const line = part.trim();
+                    if (!line.startsWith('data:')) continue;
+                    let evt;
+                    try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
+                    if (evt.error) {
+                        resultArea.innerHTML = '<span class="error">' + i18n[lang].errorPrefix + evt.error + '</span>';
+                        hadError = true;
+                    } else if (evt.delta) {
+                        full += evt.delta;
+                        resultArea.textContent = full;   // 逐字显示
+                        resultArea.scrollTop = resultArea.scrollHeight;
+                    }
+                }
+            }
+            if (!hadError && full) {
+                lastPrompt = full;
+                saveHistoryItem({ ts: Date.now(), prompt: full, refined: isRefine });
+                updateResultActions(full);
+            } else if (!hadError) {
+                resultArea.innerHTML = '<span class="error">' + i18n[lang].errorPrefix + 'empty</span>';
+            }
+        } catch (err) {
+            resultArea.innerHTML = '<span class="error">' + i18n[lang].errorNetwork + err.message + '</span>';
+        } finally {
+            generating = false;
+            generateBtn.disabled = false;
+            refineRequested = false;
+        }
+    });
+
+    let refineRequested = false;
+    const _refineBtn = document.getElementById('refineBtn');
+    _refineBtn.addEventListener('click', function() { refineRequested = true; });
+
+    // ===================== 初始化 =====================
+    applyLang();
+    renderHistory();
+</script>
+</body>
+</html>
