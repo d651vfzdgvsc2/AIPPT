@@ -5,465 +5,282 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prompt 定制助手 - 带图片理解</title>
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+        :root {
+            --bg: #FBFAF7; --surface: #FFFFFF; --ink: #0B0F0E; --muted: #6C756F;
+            --line: #E6E6E6; --accent: #2F746C; --accent-dark: #21564F;
+            --accent-soft: #E6F1EF; --soft: #F7F6F2;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; }
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            background: #f5f5f0;
+            margin: 0; background: var(--bg); color: var(--ink);
+            font: 15px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", Inter, Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
-
-        .card {
-            width: 100%;
-            max-width: 720px;
-            background: #fff;
-            border-radius: 24px;
-            padding: 40px 36px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-            transition: box-shadow 0.2s;
+        .app {
+            max-width: 1200px; height: 100vh; margin: 0 auto;
+            display: grid; grid-template-columns: 430px minmax(0, 1fr);
+            background: var(--surface);
+            border-left: 1px solid var(--line); border-right: 1px solid var(--line);
         }
-
-        .card:hover {
-            box-shadow: 0 8px 40px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+        .panel {
+            border-right: 1px solid var(--line); padding: 26px 26px 20px;
+            overflow-y: auto; display: flex; flex-direction: column; gap: 22px;
         }
+        .stage { padding: 26px 30px; overflow-y: auto; }
 
-        h2 {
-            font-size: 22px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 6px;
-            letter-spacing: -0.3px;
+        .brandbar { display: flex; align-items: center; gap: 12px; }
+        .logo {
+            width: 38px; height: 38px; border-radius: 12px; background: var(--accent); color: #fff;
+            display: grid; place-items: center; font-size: 18px; flex: none;
         }
-
-        .subtitle {
-            font-size: 14px;
-            color: #94a3b8;
-            margin-bottom: 28px;
+        .brand { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+        .brand-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+        .lang {
+            margin-left: auto; border: 1px solid var(--line); background: #fff; border-radius: 9px;
+            padding: 6px 11px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer;
         }
+        .lang:hover { border-color: var(--ink); color: var(--ink); }
 
-        .form-group {
-            margin-bottom: 20px;
+        .step { display: flex; flex-direction: column; gap: 10px; }
+        .step-head {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12px; font-weight: 800; color: var(--muted);
+            letter-spacing: 0.06em; text-transform: uppercase;
         }
-
-        .form-group label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: #475569;
-            margin-bottom: 6px;
+        .step-head .num {
+            width: 20px; height: 20px; border-radius: 6px; background: var(--accent); color: #fff;
+            display: grid; place-items: center; font-size: 11px; flex: none;
         }
+        .linkbtn { margin-left: auto; border: none; background: none; color: var(--accent);
+                   font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; text-transform: none; }
+        .linkbtn:disabled { opacity: .45; cursor: default; }
 
-        .tpl-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
+        .tpl-row { display: flex; gap: 7px; flex-wrap: wrap; }
         .tpl-chip {
-            padding: 5px 12px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 999px;
-            background: #fff;
-            color: #475569;
-            font-size: 12.5px;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.15s ease;
+            padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff;
+            color: #3f434b; font: 12px inherit; cursor: pointer; transition: all .15s ease;
         }
-
-        .tpl-chip:hover { border-color: #3b82f6; color: #3b82f6; background: #f0f7ff; }
+        .tpl-chip:hover { border-color: var(--ink); color: var(--ink); background: var(--soft); }
 
         textarea {
-            width: 100%;
-            padding: 14px 16px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 14px;
-            font-size: 15px;
-            font-family: inherit;
-            line-height: 1.6;
-            resize: vertical;
-            transition: all 0.2s ease;
-            background: #fafbfc;
-            color: #1e293b;
+            width: 100%; padding: 14px 15px; border: 1px solid var(--line); border-radius: 14px;
+            font: 14px/1.6 inherit; color: var(--ink); background: var(--soft); resize: vertical;
+            transition: all .15s ease;
         }
-
-        textarea::placeholder { color: #94a3b8; }
-
-        textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
-            background: #fff;
-        }
+        textarea::placeholder { color: #A7AAB1; }
+        textarea:focus { outline: none; border-color: var(--accent); background: #fff;
+                         box-shadow: 0 0 0 4px rgba(47,116,108,.14); }
 
         .upload-zone {
-            position: relative;
-            border: 2px dashed #d1d5db;
-            border-radius: 14px;
-            padding: 28px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: #fafbfc;
+            position: relative; border: 1.5px dashed #CFCDC6; border-radius: 14px;
+            padding: 22px 16px; text-align: center; cursor: pointer; background: var(--soft);
+            transition: all .15s ease;
         }
+        .upload-zone:hover { border-color: var(--accent); background: #fff; }
+        .upload-zone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+        .upload-zone.has-image { border-style: solid; padding: 12px; }
+        .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .upload-icon { display: block; font-size: 22px; color: var(--muted); margin-bottom: 6px; }
+        .upload-text { font-size: 13px; color: #4b4f57; }
+        .upload-text strong { color: var(--accent); }
+        .upload-hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
 
-        .upload-zone:hover { border-color: #3b82f6; background: #f0f7ff; }
-        .upload-zone.dragover { border-color: #3b82f6; background: #eef4ff; }
-
-        .upload-zone.has-image {
-            border-style: solid;
-            border-color: #d1d5db;
-            padding: 16px;
-        }
-
-        .upload-zone input[type="file"] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .upload-icon { font-size: 32px; margin-bottom: 8px; display: block; }
-        .upload-text { font-size: 14px; color: #64748b; }
-        .upload-text strong { color: #3b82f6; }
-        .upload-hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-
-        .preview-wrap { display: none; position: relative; margin-top: 12px; }
+        .preview-wrap { display: none; position: relative; }
         .preview-wrap.visible { display: block; }
-
-        .preview-wrap img {
-            max-width: 100%;
-            max-height: 220px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            display: block;
+        .preview-wrap img { max-width: 100%; max-height: 200px; border-radius: 12px;
+                            border: 1px solid var(--line); display: block; }
+        .clear-btn {
+            position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%;
+            border: none; background: rgba(20,22,26,.6); color: #fff; font-size: 15px;
+            line-height: 26px; text-align: center; cursor: pointer;
         }
+        .clear-btn:hover { background: rgba(20,22,26,.85); }
 
-        .preview-wrap .clear-btn {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(0,0,0,0.5);
-            color: #fff;
-            font-size: 16px;
-            line-height: 26px;
-            text-align: center;
-            cursor: pointer;
-            transition: background 0.2s;
+        .palette-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .swatch { text-align: center; font-size: 11px; color: var(--muted); }
+        .swatch input[type=color] {
+            display: block; width: 56px; height: 40px; border: 1px solid var(--line);
+            border-radius: 11px; background: #fff; padding: 3px; cursor: pointer;
         }
-
-        .preview-wrap .clear-btn:hover { background: rgba(0,0,0,0.7); }
-
-        .toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
+        .spec-empty { font-size: 12.5px; color: var(--muted); }
+        .style-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .style-fields label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 5px; }
+        .style-fields input {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px;
+            font: 13px inherit; color: var(--ink); background: var(--soft);
         }
+        .style-fields input::placeholder { color: #A7AAB1; }
+        .style-fields input:focus { outline: none; border-color: var(--accent); background: #fff;
+                                    box-shadow: 0 0 0 4px rgba(47,116,108,.14); }
 
-        .toolbar button {
-            padding: 6px 14px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            background: #fff;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .cta { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding-top: 8px; }
+        .btn-primary {
+            width: 100%; padding: 15px; border: none; border-radius: 14px; background: var(--accent);
+            color: #fff; font: 15px inherit; font-weight: 700; cursor: pointer; transition: all .15s ease;
+            display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: .2px;
         }
-
-        .toolbar button:hover { border-color: #3b82f6; color: #3b82f6; }
-        .toolbar .btn-lang { margin-right: auto; }
-
-        .toolbar .btn-vip {
-            border-color: #f59e0b;
-            color: #d97706;
-            background: #fffbeb;
+        .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+        .btn-ghost {
+            width: 100%; padding: 13px; border: 1px solid var(--line); border-radius: 14px;
+            background: #fff; color: #3f434b; font: 14px inherit; font-weight: 600; cursor: pointer;
+            transition: all .15s ease;
         }
+        .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
 
-        .toolbar .btn-vip:hover { background: #fef3c7; border-color: #f59e0b; }
-
-        .btn-generate {
-            width: 100%;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 14px;
-            background: #3b82f6;
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 14px rgba(59,130,246,0.35);
-            letter-spacing: 0.3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-generate:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(59,130,246,0.45);
-        }
-
-        .btn-generate:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
-        .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
+        .stage-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .stage-title { font-size: 12.5px; font-weight: 800; color: var(--muted);
+                       letter-spacing: 0.06em; text-transform: uppercase; }
+        .stage-meta { font-size: 12px; color: var(--muted); }
         .result-area {
-            margin-top: 24px;
-            padding: 20px;
-            border-radius: 14px;
-            border: 1.5px solid #e2e8f0;
-            background: #fafbfc;
-            min-height: 60px;
-            line-height: 1.7;
-            color: #1e293b;
-            font-size: 15px;
-            white-space: pre-wrap;
-            word-break: break-word;
-            transition: border-color 0.2s;
+            min-height: 240px; padding: 20px; border: 1px solid var(--line); border-radius: 16px;
+            background: #fff; line-height: 1.75; font-size: 14.5px; white-space: pre-wrap;
+            word-break: break-word; color: var(--ink);
         }
+        .result-area.has-content { border-color: #DEDCD5; }
+        .result-area .placeholder { color: #A7AAB1; }
+        .result-area .error { color: #E11D48; font-weight: 600; }
+        .result-area .thinking { color: var(--muted); }
 
-        .result-area.has-content { border-color: #d1d5db; background: #fff; }
-        .result-area .placeholder { color: #94a3b8; }
-        .result-area .error { color: #ef4444; font-weight: 500; }
-        .result-area .thinking { color: #64748b; }
-
-        .result-actions {
-            display: none;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
+        .result-actions { display: none; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .result-actions.visible { display: flex; }
-
-        .result-actions .char-count { font-size: 12px; color: #94a3b8; }
-
+        .result-actions .char-count { font-size: 12px; color: var(--muted); }
         .mini-btn {
-            padding: 6px 14px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            background: #fff;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+            color: #3f434b; font: 12.5px inherit; font-weight: 600; cursor: pointer; transition: all .15s ease;
+            margin: 0;
         }
+        .mini-btn:hover { border-color: var(--ink); color: var(--ink); }
+        .mini-btn.refine { border-color: #BBF7D0; color: #047857; background: #F0FDF4; }
+        .mini-btn.refine:hover { background: #DCFCE7; border-color: #86EFAC; }
 
-        .mini-btn:hover { border-color: #3b82f6; color: #3b82f6; }
-        .mini-btn.refine { border-color: #10b981; color: #059669; }
-        .mini-btn.refine:hover { background: #ecfdf5; }
-
-        .history-section { margin-top: 20px; display: none; }
+        .history-section { margin-top: 24px; display: none; }
         .history-section.visible { display: block; }
-
-        .history-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .history-head .history-title { font-size: 13px; font-weight: 500; color: #475569; }
-        .history-head .history-clear {
-            border: none; background: none; color: #94a3b8;
-            font-size: 12px; cursor: pointer; font-family: inherit;
-        }
-        .history-head .history-clear:hover { color: #ef4444; }
-
+        .history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .history-title { font-size: 12.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .history-clear { border: none; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+        .history-clear:hover { color: #E11D48; }
         .history-item {
-            padding: 10px 12px;
-            border: 1.5px solid #f1f5f9;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.15s ease;
+            padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px;
+            cursor: pointer; background: #fff; transition: all .15s ease;
         }
-
-        .history-item:hover { border-color: #bfdbfe; background: #f8fafc; }
-        .history-item .h-meta { font-size: 11px; color: #94a3b8; margin-bottom: 3px; display: flex; gap: 8px; }
+        .history-item:hover { border-color: var(--accent); }
+        .history-item .h-meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
         .history-item .h-text {
-            font-size: 13px; color: #334155; line-height: 1.5;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-            overflow: hidden;
+            font-size: 13px; color: #3f434b; line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
 
-        .sponsor-section {
-            margin-top: 28px;
-            padding-top: 20px;
-            border-top: 1.5px solid #f1f5f9;
-            text-align: center;
-        }
-
-        .sponsor-section .sponsor-label { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
-
-        .sponsor-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-
-        .sponsor-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            background: #fff;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: inherit;
-            color: #475569;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-        }
-
-        .sponsor-btn:hover { border-color: #3b82f6; background: #f0f7ff; }
-        .sponsor-btn .icon { font-size: 18px; }
-
-        .qr-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
+        .qr-overlay { display: none; position: fixed; inset: 0; background: rgba(10,12,16,.55);
+                      z-index: 1000; align-items: center; justify-content: center; }
         .qr-overlay.visible { display: flex; }
+        .qr-modal { background: #fff; border-radius: 20px; padding: 28px; text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,.18); max-width: 300px; width: 90%; }
+        .qr-modal img { width: 200px; height: 200px; object-fit: contain; display: block;
+                        margin: 0 auto 12px; border-radius: 8px; background: #f1f5f9; }
+        .qr-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .qr-hint { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+        .qr-close { padding: 8px 22px; border: 1px solid var(--line); border-radius: 9px;
+                    background: #fff; font: 13px inherit; cursor: pointer; }
+        .qr-close:hover { border-color: var(--ink); }
 
-        .qr-modal {
-            background: #fff;
-            border-radius: 20px;
-            padding: 32px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            max-width: 300px;
-            width: 90%;
-        }
+        .hidden-tools { display: none; }
 
-        .qr-modal img {
-            width: 200px; height: 200px;
-            border-radius: 8px; background: #f1f5f9;
-            object-fit: contain; display: block; margin: 0 auto 12px;
-        }
-
-        .qr-modal .qr-label { font-size: 14px; color: #1e293b; font-weight: 500; margin-bottom: 4px; }
-        .qr-modal .qr-hint { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
-
-        .qr-modal .qr-close {
-            padding: 8px 24px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            background: #fff;
-            color: #475569;
-            font-size: 13px;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .qr-modal .qr-close:hover { border-color: #3b82f6; color: #3b82f6; }
-
-        @media (max-width: 600px) {
-            body { padding: 16px; }
-            .card { padding: 24px 20px; border-radius: 20px; }
-            h2 { font-size: 20px; }
-            .btn-generate { font-size: 15px; padding: 13px 20px; }
-            .upload-zone { padding: 20px 16px; }
+        @media (max-width: 900px) {
+            .app { grid-template-columns: 1fr; height: auto; }
+            .panel { border-right: none; border-bottom: 1px solid var(--line); }
         }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="toolbar">
-        <button class="btn-lang" id="langToggle">EN</button>
-        <button class="btn-vip" id="vipBtn"><span>👑</span> <span data-i18n="vip">升级会员</span></button>
-    </div>
-
-    <h2 data-i18n="title">视觉 Prompt 定制助手</h2>
-    <p class="subtitle" data-i18n="subtitle">上传图片或描述需求，AI 自动生成高质量 Prompt</p>
-
-    <div class="form-group">
-        <label for="userInput" data-i18n="descLabel">需求描述</label>
-        <div class="tpl-row" id="tplRow"></div>
-        <textarea id="userInput" rows="4" data-i18n-placeholder="descPlaceholder" placeholder="输入你想定制的prompt"></textarea>
-    </div>
-
-    <div class="form-group">
-        <label data-i18n="uploadLabel">上传图片（可选）</label>
-        <div class="upload-zone" id="uploadZone">
-            <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp">
-            <span class="upload-icon">📁</span>
-            <div class="upload-text" data-i18n="uploadText">拖拽图片到此处，或 <strong data-i18n="uploadClick">点击选择文件</strong></div>
-            <div class="upload-hint" data-i18n="uploadHint">支持 JPG / PNG / WebP，大图会自动压缩</div>
+<div class="app">
+    <aside class="panel">
+        <div class="brandbar">
+            <div class="logo">&#9670;</div>
+            <div>
+                <div class="brand">DeckCraft</div>
+                <div class="brand-sub" data-i18n="subtitle">参考图 &#8594; 拆解设计规范 &#8594; 直接产出可下载的 PPT</div>
+            </div>
+            <button class="lang" id="langToggle">EN</button>
         </div>
-        <div class="preview-wrap" id="previewWrap">
-            <img id="imagePreview" alt="image preview">
-            <button class="clear-btn" id="clearBtn">&times;</button>
+
+        <section class="step">
+            <div class="step-head"><span class="num">1</span><span data-i18n="descLabel">需求描述</span></div>
+            <div class="tpl-row" id="tplRow"></div>
+            <textarea id="userInput" rows="4" data-i18n-placeholder="descPlaceholder" placeholder="输入你想定制的prompt，或点上方模板快速开始"></textarea>
+        </section>
+
+        <section class="step">
+            <div class="step-head"><span class="num">2</span><span data-i18n="uploadLabel">上传图片（可选）</span></div>
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp">
+                <span class="upload-icon">&#8963;</span>
+                <div class="upload-text" data-i18n="uploadText">拖拽图片到此处，或 <strong data-i18n="uploadClick">点击选择文件</strong></div>
+                <div class="upload-hint" data-i18n="uploadHint">支持 JPG / PNG / WebP，大图会自动压缩</div>
+            </div>
+            <div class="preview-wrap" id="previewWrap">
+                <img id="imagePreview" alt="image preview">
+                <button class="clear-btn" id="clearBtn">&times;</button>
+            </div>
+        </section>
+
+        <section class="step">
+            <div class="step-head">
+                <span class="num">3</span><span>设计规范</span>
+                <button class="linkbtn" id="analyzeBtn" type="button">拆解参考图</button>
+            </div>
+            <div id="paletteRow" class="palette-row"><span class="spec-empty">上传参考图后点「拆解参考图」得到配色与风格，可直接编辑；或直接「生成演示」用默认规范。</span></div>
+            <div id="styleFields" class="style-fields" style="display:none">
+                <div><label>主题 / 气质</label><input id="f-theme" placeholder="如：沉稳商务"></div>
+                <div><label>版式特征</label><input id="f-layout" placeholder="如：大标题 + 要点列表"></div>
+                <div><label>字体与层级</label><input id="f-typography" placeholder="如：无衬线，标题特粗"></div>
+                <div><label>强调色用法</label><input id="f-accent" placeholder="如：主色用于标题，强调色用于数据"></div>
+            </div>
+        </section>
+
+        <div class="cta">
+            <button class="btn-primary" id="pptxBtn" type="button"><span>生成演示 · PPT</span></button>
+            <button class="btn-ghost" id="generateBtn" type="button"><span data-i18n="generateBtn">生成 Prompt</span></button>
         </div>
-    </div>
+    </aside>
 
-    <button class="btn-generate" id="generateBtn">
-        <span>✨</span> <span data-i18n="generateBtn">生成 Prompt</span>
-    </button>
-
-    <div class="result-area" id="resultArea">
-        <span class="placeholder" data-i18n="resultPlaceholder">等待生成...</span>
-    </div>
-
-    <div class="result-actions" id="resultActions">
-        <button class="mini-btn" id="copyBtn" data-i18n="copy">📋 复制</button>
-        <button class="mini-btn refine" id="refineBtn" data-i18n="refine">🔄 再优化一版</button>
-        <span class="char-count" id="charCount"></span>
-    </div>
-
-    <div class="history-section" id="historySection">
-        <div class="history-head">
-            <span class="history-title" data-i18n="historyTitle">🕘 历史记录（最近 20 条）</span>
-            <button class="history-clear" id="historyClear" data-i18n="historyClear">清空</button>
+    <main class="stage">
+        <div class="stage-top">
+            <div class="stage-title">输出</div>
+            <div class="stage-meta">Planner &#183; 设计规范 &#183; python-pptx</div>
         </div>
-        <div id="historyList"></div>
-    </div>
-
-    <div class="sponsor-section">
-        <div class="sponsor-label" data-i18n="sponsorLabel">❤️ 支持作者</div>
-        <div class="sponsor-row">
-            <button class="sponsor-btn" id="sponsorWechat">
-                <span class="icon">💚</span> 微信
-            </button>
-            <button class="sponsor-btn" id="sponsorAlipay">
-                <span class="icon">💙</span> 支付宝
-            </button>
-            <a class="sponsor-btn" id="sponsorBmac" href="#" target="_blank" rel="noopener">
-                <span class="icon">☕</span> Buy Me a Coffee
-            </a>
+        <div class="result-area" id="resultArea">
+            <span class="placeholder" data-i18n="resultPlaceholder">等待生成...</span>
         </div>
-    </div>
+        <div class="result-actions" id="resultActions">
+            <button class="mini-btn" id="copyBtn" data-i18n="copy">&#128203; 复制</button>
+            <button class="mini-btn refine" id="refineBtn" data-i18n="refine">&#128260; 再优化一版</button>
+            <span class="char-count" id="charCount"></span>
+        </div>
+        <div class="history-section" id="historySection">
+            <div class="history-head">
+                <span class="history-title" data-i18n="historyTitle">历史记录（最近 20 条）</span>
+                <button class="history-clear" id="historyClear" data-i18n="historyClear">清空</button>
+            </div>
+            <div id="historyList"></div>
+        </div>
+    </main>
+</div>
+
+<div class="hidden-tools">
+    <button id="vipBtn"></button>
+    <button id="sponsorWechat"></button>
+    <button id="sponsorAlipay"></button>
+    <a id="sponsorBmac" href="#" target="_blank" rel="noopener"></a>
 </div>
 
 <div class="qr-overlay" id="qrOverlay">
     <div class="qr-modal">
         <img id="qrImage" src="" alt="QR Code">
         <div class="qr-label" id="qrLabel">微信收款码</div>
-        <div class="qr-hint" data-i18n="qrHint">扫码赞助，感谢支持 ❤️</div>
+        <div class="qr-hint" data-i18n="qrHint">扫码赞助，感谢支持</div>
         <button class="qr-close" id="qrClose" data-i18n="qrClose">关闭</button>
     </div>
 </div>
@@ -504,18 +321,18 @@
     // ===================== 场景模板 =====================
     const TEMPLATES = {
         zh: [
-            { name: '📊 工作汇报', text: '帮我生成一份「季度工作汇报」PPT 的提示词：面向部门领导，包含目标回顾、关键成果（用数据说话）、问题与反思、下季度计划四个部分，风格专业简洁，蓝色商务配色。' },
-            { name: '🚀 产品发布', text: '帮我生成一份「新产品发布会」PPT 的提示词：面向媒体和客户，包含行业痛点、产品亮点（对比表格）、演示截图、价格与上市计划，风格科技感强，深色背景。' },
-            { name: '🎓 教学课件', text: '帮我生成一份教学课件的提示词：面向大学生，主题由我后续指定，包含学习目标、知识点讲解（每页一个概念+例子）、课堂互动问题、小结，风格清新易读，配图丰富。' },
-            { name: '💰 路演融资', text: '帮我生成一份创业项目融资路演 PPT 的提示词：面向投资人，包含痛点、解决方案、市场规模、商业模式、进展数据、团队、融资计划，风格简洁有力，10页以内。' },
-            { name: '📅 年终总结', text: '帮我生成一份「个人年终总结」PPT 的提示词：包含全年工作亮点、量化成绩、成长与不足、明年规划，风格温暖有感染力，适合汇报展示。' },
-            { name: '🎤 培训分享', text: '帮我生成一份内部分享 PPT 的提示词：面向同事的技术/经验分享，包含背景引入、核心方法（分步骤）、案例演示、避坑建议、参考资料，风格轻松专业。' },
+            { name: '工作汇报', text: '帮我生成一份「季度工作汇报」PPT 的提示词：面向部门领导，包含目标回顾、关键成果（用数据说话）、问题与反思、下季度计划四个部分，风格专业简洁，蓝色商务配色。' },
+            { name: '产品发布', text: '帮我生成一份「新产品发布会」PPT 的提示词：面向媒体和客户，包含行业痛点、产品亮点（对比表格）、演示截图、价格与上市计划，风格科技感强，深色背景。' },
+            { name: '教学课件', text: '帮我生成一份教学课件的提示词：面向大学生，主题由我后续指定，包含学习目标、知识点讲解（每页一个概念+例子）、课堂互动问题、小结，风格清新易读，配图丰富。' },
+            { name: '路演融资', text: '帮我生成一份创业项目融资路演 PPT 的提示词：面向投资人，包含痛点、解决方案、市场规模、商业模式、进展数据、团队、融资计划，风格简洁有力，10页以内。' },
+            { name: '年终总结', text: '帮我生成一份「个人年终总结」PPT 的提示词：包含全年工作亮点、量化成绩、成长与不足、明年规划，风格温暖有感染力，适合汇报展示。' },
+            { name: '培训分享', text: '帮我生成一份内部分享 PPT 的提示词：面向同事的技术/经验分享，包含背景引入、核心方法（分步骤）、案例演示、避坑建议、参考资料，风格轻松专业。' },
         ],
         en: [
-            { name: '📊 Work Report', text: 'Generate a prompt for a quarterly work report PPT: for department leaders, covering goals review, key results (data-driven), reflections, and next quarter plan. Professional style, business blue palette.' },
-            { name: '🚀 Product Launch', text: 'Generate a prompt for a product launch PPT: for media and customers, covering pain points, product highlights (comparison table), demo screenshots, pricing and launch plan. Tech-savvy style, dark background.' },
-            { name: '🎓 Courseware', text: 'Generate a prompt for a teaching PPT: for college students, with learning objectives, one concept per page with examples, in-class questions, and summary. Clean and readable style.' },
-            { name: '💰 Pitch Deck', text: 'Generate a prompt for a startup fundraising pitch deck: for investors, covering problem, solution, market size, business model, traction, team, and ask. Concise and powerful, under 10 slides.' },
+            { name: 'Work Report', text: 'Generate a prompt for a quarterly work report PPT: for department leaders, covering goals review, key results (data-driven), reflections, and next quarter plan. Professional style, business blue palette.' },
+            { name: 'Product Launch', text: 'Generate a prompt for a product launch PPT: for media and customers, covering pain points, product highlights (comparison table), demo screenshots, pricing and launch plan. Tech-savvy style, dark background.' },
+            { name: 'Courseware', text: 'Generate a prompt for a teaching PPT: for college students, with learning objectives, one concept per page with examples, in-class questions, and summary. Clean and readable style.' },
+            { name: 'Pitch Deck', text: 'Generate a prompt for a startup fundraising pitch deck: for investors, covering problem, solution, market size, business model, traction, team, and ask. Concise and powerful, under 10 slides.' },
         ]
     };
 
@@ -533,8 +350,8 @@
     // ===================== i18n =====================
     const i18n = {
         zh: {
-            title: '视觉 Prompt 定制助手',
-            subtitle: '上传图片或描述需求，AI 自动生成高质量 Prompt',
+            title: 'DeckCraft · 演示设计工作流',
+            subtitle: '参考图 → 拆解设计规范 → 直接产出可下载的 PPT',
             descLabel: '需求描述',
             descPlaceholder: '输入你想定制的prompt，或点上方模板快速开始',
             uploadLabel: '上传图片（可选）',
@@ -551,12 +368,12 @@
             errorNetwork: '网络错误：',
             vipAlert: '会员功能即将开放，敬请期待！',
             sponsorLabel: '❤️ 支持作者',
-            qrHint: '扫码赞助，感谢支持 ❤️',
+            qrHint: '扫码赞助，感谢支持',
             qrClose: '关闭',
-            copy: '📋 复制',
+            copy: '复制',
             copied: '✅ 已复制到剪贴板',
             copyFail: '复制失败，请手动选择复制',
-            refine: '🔄 再优化一版',
+            refine: '再优化一版',
             refinePlaceholder: '想怎么改？例如：更专业一点 / 加一页数据对比 / 换成科技风...',
             refineHint: '🔄 优化模式：输入修改意见后点生成，AI 会在上一版基础上修改',
             historyTitle: '🕘 历史记录（最近 20 条）',
@@ -567,8 +384,8 @@
             freshLabel: '全新',
         },
         en: {
-            title: 'Visual Prompt Assistant',
-            subtitle: 'Upload an image or describe your needs, AI generates high-quality prompts',
+            title: 'DeckCraft · Deck Design Workflow',
+            subtitle: 'Reference image → design spec → downloadable PPT',
             descLabel: 'Description',
             descPlaceholder: 'Enter your custom prompt, or pick a template above',
             uploadLabel: 'Upload Image (Optional)',
@@ -587,10 +404,10 @@
             sponsorLabel: '❤️ Support the Author',
             qrHint: 'Scan to sponsor, thank you! ❤️',
             qrClose: 'Close',
-            copy: '📋 Copy',
+            copy: 'Copy',
             copied: '✅ Copied to clipboard',
             copyFail: 'Copy failed, please select manually',
-            refine: '🔄 Refine',
+            refine: 'Refine',
             refinePlaceholder: 'How to improve? e.g. more professional / add a data slide / tech style...',
             refineHint: '🔄 Refine mode: type your feedback and generate — AI will revise the last version',
             historyTitle: '🕘 History (last 20)',
@@ -886,6 +703,95 @@
     let refineRequested = false;
     const _refineBtn = document.getElementById('refineBtn');
     _refineBtn.addEventListener('click', function() { refineRequested = true; });
+
+    // ===================== 设计规范（参考图拆解）+ 出 PPT =====================
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const pptxBtn = document.getElementById('pptxBtn');
+    const paletteRow = document.getElementById('paletteRow');
+    const styleFields = document.getElementById('styleFields');
+    let designSpec = { palette: [], style: {} };
+
+    function renderSpec(palette, style) {
+        designSpec.palette = (palette || []).map(p => ({ hex: p.hex, name: p.name || '', share: p.share || 0 }));
+        designSpec.style = style || {};
+        paletteRow.innerHTML = '';
+        if (!designSpec.palette.length) {
+            paletteRow.innerHTML = '<span class="spec-empty">未提取到配色（参考图可能过小/过灰）。</span>';
+        }
+        designSpec.palette.forEach((p, i) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'swatch';
+            const inp = document.createElement('input');
+            inp.type = 'color';
+            inp.value = /^#[0-9a-fA-F]{6}$/.test(p.hex) ? p.hex : '#1F4468';
+            inp.addEventListener('input', () => { designSpec.palette[i].hex = inp.value; });
+            const lab = document.createElement('div');
+            lab.textContent = p.name || '';
+            wrap.appendChild(inp); wrap.appendChild(lab);
+            paletteRow.appendChild(wrap);
+        });
+        const st = designSpec.style || {};
+        document.getElementById('f-theme').value = st.theme || '';
+        document.getElementById('f-layout').value = st.layout || '';
+        document.getElementById('f-typography').value = st.typography || '';
+        document.getElementById('f-accent').value = st.accent_usage || '';
+        styleFields.style.display = 'grid';
+    }
+
+    function collectSpec() {
+        designSpec.style = {
+            theme: document.getElementById('f-theme').value.trim(),
+            layout: document.getElementById('f-layout').value.trim(),
+            typography: document.getElementById('f-typography').value.trim(),
+            accent_usage: document.getElementById('f-accent').value.trim(),
+            mood_keywords: (designSpec.style && designSpec.style.mood_keywords) || [],
+        };
+        return designSpec;
+    }
+
+    analyzeBtn.addEventListener('click', async function() {
+        if (!base64Image) { alert('请先上传参考图'); return; }
+        analyzeBtn.disabled = true; const old = analyzeBtn.textContent; analyzeBtn.textContent = '拆解中…';
+        try {
+            const res = await fetch('/analyze', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_base64: base64Image }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || ('HTTP ' + res.status));
+            renderSpec(data.palette, data.style);
+        } catch (e) {
+            alert('拆解失败：' + e.message);
+        } finally {
+            analyzeBtn.disabled = false; analyzeBtn.textContent = old;
+        }
+    });
+
+    pptxBtn.addEventListener('click', async function() {
+        const text = userInput.value.trim();
+        if (!text && !base64Image) { alert('请填写需求或上传参考图'); return; }
+        pptxBtn.disabled = true; const old = pptxBtn.innerHTML; pptxBtn.innerHTML = '<span>⏳</span> <span>正在生成 PPT…</span>';
+        try {
+            const res = await fetch('/deck', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_input: text, image_base64: base64Image, spec: collectSpec() }),
+            });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d.error || ('HTTP ' + res.status));
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'DeckCraft.pptx';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('生成失败：' + e.message);
+        } finally {
+            pptxBtn.disabled = false; pptxBtn.innerHTML = old;
+        }
+    });
 
     // ===================== 初始化 =====================
     applyLang();

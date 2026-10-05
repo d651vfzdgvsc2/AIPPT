@@ -7,6 +7,10 @@ __pycache__/
 .venv/
 venv/
 
+# 前端
+frontend/node_modules/
+frontend/dist/
+
 # 系统
 .DS_Store
 Thumbs.db

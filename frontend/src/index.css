@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { margin: 0; background: #FBFAF7; color: #0B0F0E; }
+
+::selection { background: #E6F1EF; }

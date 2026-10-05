@@ -3,11 +3,18 @@ import os
 import time
 from collections import defaultdict
 
+from pathlib import Path
+
 import requests
 from dotenv import load_dotenv
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+
+import design
 
 load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
@@ -115,7 +122,15 @@ def _payload_for(user_input, image_base64, previous_prompt, stream=False):
 
 @app.route("/")
 def index():
+    # 优先托管 React 构建产物（frontend/dist）；没有则回退到旧模板
+    if (FRONTEND_DIST / "index.html").exists():
+        return send_from_directory(FRONTEND_DIST, "index.html")
     return render_template("index.html")
+
+
+@app.route("/assets/<path:filename>")
+def spa_assets(filename):
+    return send_from_directory(FRONTEND_DIST / "assets", filename)
 
 
 @app.route("/health")
@@ -199,6 +214,63 @@ def generate_stream():
             yield sse({"error": f"请求 DeepSeek API 失败：{e}"})
 
     return Response(gen(), mimetype="text/event-stream")
+
+
+def _norm_palette(pal) -> list:
+    out = []
+    for p in pal or []:
+        if isinstance(p, dict) and p.get("hex"):
+            out.append(p)
+        elif isinstance(p, str) and p.strip():
+            out.append({"hex": p.strip(), "name": "", "share": 0})
+    return out
+
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    """把参考图拆解成结构化设计规范（主色 + 风格），前端可编辑。"""
+    data = request.get_json(silent=True) or {}
+    image_base64 = data.get("image_base64") or None
+    if not image_base64:
+        return jsonify({"success": False, "error": "请先上传参考图"}), 400
+    if rate_limited(request.remote_addr or "unknown"):
+        return jsonify({"success": False, "error": "请求太频繁，请稍后再试"}), 429
+    if not DEEPSEEK_API_KEY:
+        return jsonify({"success": False, "error": "后端未配置 DEEPSEEK_API_KEY"}), 500
+    palette = design.extract_palette(image_base64)
+    style = design.analyze_style(image_base64, palette, DEEPSEEK_API_URL, DEEPSEEK_API_KEY, DEEPSEEK_MODEL)
+    return jsonify({"success": True, "palette": palette, "style": style})
+
+
+@app.route("/deck", methods=["POST"])
+def deck():
+    """按设计规范 + 需求生成大纲，直接产出可下载的 .pptx。"""
+    data = request.get_json(silent=True) or {}
+    user_input = (data.get("user_input") or "").strip()
+    image_base64 = data.get("image_base64") or None
+    spec = data.get("spec") or {}
+    if not user_input and not image_base64:
+        return jsonify({"success": False, "error": "请填写需求或上传参考图"}), 400
+    if rate_limited(request.remote_addr or "unknown"):
+        return jsonify({"success": False, "error": "请求太频繁，请稍后再试"}), 429
+    if not DEEPSEEK_API_KEY:
+        return jsonify({"success": False, "error": "后端未配置 DEEPSEEK_API_KEY"}), 500
+
+    palette = _norm_palette(spec.get("palette"))
+    if not palette and image_base64:
+        palette = design.extract_palette(image_base64)
+    style = spec.get("style") or {}
+    if not style and image_base64:
+        style = design.analyze_style(image_base64, palette, DEEPSEEK_API_URL, DEEPSEEK_API_KEY, DEEPSEEK_MODEL)
+    spec = {"palette": palette, "style": style}
+
+    outline = design.plan_deck(user_input, spec, DEEPSEEK_API_URL, DEEPSEEK_API_KEY, DEEPSEEK_MODEL)
+    data_bytes = design.build_pptx(spec, outline)
+    return Response(
+        data_bytes,
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": "attachment; filename=DeckCraft.pptx"},
+    )
 
 
 if __name__ == "__main__":

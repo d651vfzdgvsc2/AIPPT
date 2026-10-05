@@ -1,8 +1,12 @@
-# Prompt 定制助手 · AI 提示词自动化生成与 PPT 定制工具
+# DeckCraft · 参考图驱动的演示设计工作流
 
-> 上传图片或描述需求，AI 自动生成一条**结构清晰、可直接使用**的高质量 PPT 提示词；支持**流式输出**与**迭代优化**。
+> 上传一张参考图或描述需求 → **拆解成结构化、可编辑的设计规范** → **直接产出可下载的 `.pptx`**；同时保留"生成高质量 PPT 提示词 + 流式输出 + 迭代优化"。
 
-面向"想做 PPT 但不会写 Prompt"的办公/学习场景：把一句自然语言（或一张参考图）转成专业、细节充分的 PPT 提示词，并能在结果基础上不断修改，而不是每次从零重来。
+**核心升级（v2）**：不再只是"写提示词"，而是把演示设计做成一条可交付的工作流——
+**参考图 → 设计规范（配色/版式/字体，可编辑、可复用）→ 成品 PPT**。
+
+**设计哲学**（延续同类项目）：**精确的事交给算法，理解的事交给 AI**——
+主色用 OpenCV k-means 确定性提取；风格语义与内容大纲交大模型；规范可编辑、可沉淀复用（Skill 化）。
 
 ---
 
@@ -18,6 +22,8 @@
 
 ## 二、功能特性
 
+- **参考图 → 结构化设计规范**：上传参考图，用 **OpenCV k-means 提取主色**（确定性），再交视觉大模型理解**主题 / 版式 / 字体 / 强调色用法**，全部**可编辑**；
+- **直接产出 `.pptx`**：按"规范 + 大模型生成的大纲（封面 + 逐页要点）"用 **python-pptx** 渲染成 16:9 幻灯片并**下载**；
 - **需求输入 / 模板快捷**：文本框输入自然语言需求，模板 chips 一键填充；
 - **参考图上传（可选）**：支持点击选择 / 拖拽上传，上传前**前端压缩**（最长边 1280、JPEG 85%），降低上传体积与 token 消耗；
 - **流式生成**：通过 SSE 边生成边推送，结果**逐字显示**；
@@ -33,10 +39,12 @@
 | 层 | 技术 |
 |---|---|
 | 后端 | Python 3.10+、Flask、Requests、python-dotenv |
-| 前端 | 原生 HTML + CSS + JavaScript（无框架） |
+| 前端 | **React 18 + Vite + Tailwind CSS**（构建产物由 Flask 托管；`templates/index.html` 旧模板保留为回退） |
 | 通信 | SSE（`text/event-stream`）流式输出 |
 | 存储 | localStorage（浏览器本地历史） |
 | 大模型 | **DeepSeek API（视觉模型）**，文本 + 图片均可处理 |
+| 视觉/图像 | **OpenCV**（k-means 主色提取）、**Pillow** |
+| 文档生成 | **python-pptx**（直接产出 `.pptx`） |
 
 ---
 
@@ -72,6 +80,8 @@ Flask 后端 · 校验（需求或图片非空 / 单 IP 限流 / API Key 检查�
 | `/health` | GET | — | `{ status, api_key_configured, model }` |
 | `/generate` | POST | `{ user_input, image_base64, previous_prompt }` | `{ success, prompt }` |
 | `/generate/stream` | POST | 同上 | SSE：`{delta}` … `{done}` / `{error}` |
+| `/analyze` | POST | `{ image_base64 }` | `{ success, palette[], style{} }`（参考图 → 设计规范） |
+| `/deck` | POST | `{ user_input, image_base64?, spec? }` | 直接返回 `.pptx` 文件下载 |
 
 ---
 
@@ -79,9 +89,11 @@ Flask 后端 · 校验（需求或图片非空 / 单 IP 限流 / API Key 检查�
 
 ```
 ppt提示词项目/
-├── app.py                 # Flask 后端（/generate、/generate/stream、/health）
+├── app.py                 # Flask 后端（/generate、/generate/stream、/analyze、/deck、/health）
+├── design.py              # 设计工作流核心（k-means 提色 / 风格拆解 / 大纲 / python-pptx 渲染）
+├── frontend/              # React + Vite + Tailwind 前端（构建产物 frontend/dist 由 Flask 托管）
 ├── templates/
-│   └── index.html         # 前端页面（输入 / 上传 / 流式结果 / 历史 / i18n）
+│   └── index.html         # 旧版前端页面（回退用）
 ├── static/                # 静态资源
 ├── requirements.txt
 ├── .env.example           # 配置模板（复制为 .env 后填入 Key）
@@ -107,6 +119,21 @@ python app.py               # 看到 Running on http://127.0.0.1:5000
 浏览器打开 <http://127.0.0.1:5000> 即可使用。
 
 ---
+
+## 七·五、前端开发（React + Vite + Tailwind）
+
+前端源码在 `frontend/`，构建产物由 Flask 在 `/` 直接托管（无需另跑服务）。
+
+```bash
+cd frontend
+npm install
+npm run build      # 产出 frontend/dist，Flask 自动托管
+
+# 或本地开发（热更新，API 已配置代理到 127.0.0.1:5000）
+npm run dev        # http://127.0.0.1:5173
+```
+
+> 若 `frontend/dist` 不存在，Flask 会回退到旧版 `templates/index.html`。
 
 ## 八、配置项（.env）
 
