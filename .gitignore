@@ -11,6 +11,9 @@ venv/
 frontend/node_modules/
 frontend/dist/
 
+# 运行时数据（保存的设计 Skill）
+skills/
+
 # 系统
 .DS_Store
 Thumbs.db

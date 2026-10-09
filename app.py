@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from collections import defaultdict
 
@@ -271,6 +272,55 @@ def deck():
         mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         headers={"Content-Disposition": "attachment; filename=DeckCraft.pptx"},
     )
+
+
+# ===== 设计 Skill（可复用的设计规范库）=====
+SKILLS_DIR = BASE_DIR / "skills"
+SKILLS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _safe_name(name) -> str:
+    """只保留中英文、数字、空格、连字符，避免路径逃逸。"""
+    return re.sub(r"[^\w\u4e00-\u9fff\- ]", "", str(name or "")).strip()[:40]
+
+
+@app.route("/skills", methods=["GET", "POST"])
+def skills():
+    if request.method == "GET":
+        out = []
+        for f in sorted(SKILLS_DIR.glob("*.json")):
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            out.append({"name": d.get("name", f.stem),
+                        "style": (d.get("spec") or {}).get("style") or {}})
+        return jsonify({"skills": out})
+
+    # POST：保存一个 Skill
+    data = request.get_json(silent=True) or {}
+    name = _safe_name(data.get("name"))
+    spec = data.get("spec") or {}
+    if not name:
+        return jsonify({"error": "请给这个 Skill 起个名字"}), 400
+    if not (spec.get("palette") or spec.get("style")):
+        return jsonify({"error": "当前没有可保存的设计规范（先「拆解参考图」）"}), 400
+    (SKILLS_DIR / f"{name}.json").write_text(
+        json.dumps({"name": name, "spec": spec}, ensure_ascii=False, indent=2), encoding="utf-8")
+    return jsonify({"ok": True, "name": name})
+
+
+@app.route("/skills/<name>", methods=["GET", "DELETE"])
+def skill_item(name):
+    n = _safe_name(name)
+    f = SKILLS_DIR / f"{n}.json"
+    if request.method == "DELETE":
+        if f.exists():
+            f.unlink()
+        return jsonify({"ok": True})
+    if not f.exists():
+        return jsonify({"error": "Skill 不存在"}), 404
+    return jsonify(json.loads(f.read_text(encoding="utf-8")))
 
 
 if __name__ == "__main__":
